@@ -1,0 +1,208 @@
+`timescale 1ns / 1ps
+
+module pll_top #(
+parameter WIDTH = 16
+)(
+    input  wire clk,
+    input  wire ext_rst,
+    input  wire ref_sig,
+    output wire pll_out
+);
+
+    wire [WIDTH-1:0] accum_var;
+    wire [WIDTH-1:0] phase;
+    wire signed [WIDTH-1:0] tdc;
+    wire valid;
+
+    wire cmp_sig;
+    assign cmp_sig = pll_out;
+
+    pd #(.WIDTH(WIDTH)) u_pd (
+        .ref_sig(ref_sig),
+        .cmp_sig(cmp_sig),
+        .clk(clk),
+        .ext_rst(ext_rst),
+        .tdc(tdc),
+        .valid(valid)
+    );
+
+    lf #(.WIDTH(WIDTH)) u_lf (
+        .clk(clk),
+        .ext_rst(ext_rst),
+        .valid(valid),
+        .tdc(tdc),
+        .accum_var(accum_var)
+    );
+    
+    nco #(.WIDTH(WIDTH)) u_nco (
+        .clk(clk),
+        .ext_rst(ext_rst),
+        .accum_var(accum_var),
+        .sig_out(pll_out),
+        .phase(phase)
+    );
+
+endmodule    
+    
+module pd #(
+
+parameter WIDTH = 16
+
+)(
+    input wire ref_sig,
+    input wire cmp_sig,
+    input clk,
+    input ext_rst,
+    output reg signed [WIDTH-1:0] tdc,
+    output reg valid //two signals occur
+);
+    
+    reg ref_1;
+    reg ref_2; 
+    reg cmp_1;
+    reg cmp_2;
+    reg ref_prev;
+    reg cmp_prev;
+    reg counting;
+    reg [WIDTH-1:0] counter;
+    reg first_ref;
+                
+    always @ (posedge clk or posedge ext_rst) begin       
+        if (ext_rst) begin
+            ref_1 <= 0;
+            ref_2 <= 0;
+            cmp_1 <= 0;
+            cmp_2 <= 0;
+        end else begin
+            ref_1 <= ref_sig;
+            ref_2 <= ref_1;
+            cmp_1 <= cmp_sig;
+            cmp_2 <= cmp_1;            
+        end
+    end       
+    
+    always @ (posedge clk or posedge ext_rst) begin
+        if (ext_rst) begin
+            ref_prev <= 0;
+            cmp_prev <= 0;
+            first_ref <= 0;
+        end else begin
+            ref_prev <= ref_2; 
+            cmp_prev <= cmp_2;    
+        end
+    end
+    
+    wire ref_rise;
+    wire cmp_rise;
+    
+    assign ref_rise = (ref_2 & ~ref_prev);
+    assign cmp_rise = (cmp_2 & ~cmp_prev);   
+
+    always @ (posedge clk or posedge ext_rst) begin
+        if (ext_rst) begin     
+            counter <= 0;
+            counting <= 0;
+            tdc <= 0;
+            valid <= 0;
+        end else begin
+            valid <= 0;    
+            if (counting) begin
+                counter <= counter + 1'b1;
+            end            
+            if (!counting && (ref_rise || cmp_rise)) begin
+                counting <= 1'b1;
+                counter <= 0;
+                first_ref <= ref_rise;
+            end
+            
+            if (counting) begin
+                if (first_ref && cmp_rise) begin
+                    counting <= 1'b0;
+                    tdc <=  $signed(counter);  // ref ahead cmp
+                    valid <= 1'b1;
+                end else if (!first_ref && ref_rise) begin
+                    counting <= 1'b0;
+                    tdc <= -$signed(counter);  // cmp ahead ref
+                    valid <= 1'b1;
+                end
+            end    
+        end
+    end
+endmodule
+    
+module lf#(
+    parameter WIDTH = 16,
+    parameter [WIDTH-1:0] SPEED_MAX = 16'hFFFF,
+    parameter [WIDTH-1:0] SPEED_MIN = 16'h0000,
+    parameter [WIDTH-1:0] SPEED_DEF = 16'h1000,
+    parameter [WIDTH-1:0] bit_incr  = 16'd16,
+    parameter [WIDTH-1:0] ACCUM_MIN = 16'd4000,
+    parameter [WIDTH-1:0] ACCUM_MAX = 16'd12000,
+    parameter integer P_SHIFT = 4,
+    parameter integer I_SHIFT = 8
+)(
+    input clk,
+    input ext_rst,
+    input valid,
+    input  wire signed [WIDTH-1:0] tdc,
+    output reg [WIDTH-1:0] accum_var
+);
+
+reg signed [WIDTH:0] accum_prev;
+reg signed [WIDTH:0] i_sum;
+wire signed [WIDTH:0] i_calc;
+wire signed [WIDTH:0] accum_calc;
+wire signed [WIDTH:0] i_term;
+wire signed [WIDTH:0] p_term;
+
+assign i_term = $signed(tdc) >>> I_SHIFT;
+assign p_term = $signed(tdc) >>> P_SHIFT;
+
+assign i_calc  = i_sum + i_term;
+assign accum_calc = accum_prev + p_term + i_calc;
+
+always @ (posedge clk or posedge ext_rst) begin
+    if (ext_rst) begin
+        accum_var  <= (ACCUM_MIN + ACCUM_MAX)/2;
+        accum_prev <= $signed({1'b0, (ACCUM_MIN + ACCUM_MAX)/2});
+        i_sum      <= 0;
+    end else if (valid) begin
+        i_sum      <= i_calc;
+        if (accum_calc < $signed({1'b0, ACCUM_MIN})) begin //adds 0 to MSB to make it a non-negative
+            accum_var <= ACCUM_MIN;
+            accum_prev <= $signed({1'b0, ACCUM_MIN});
+        end else if (accum_calc > $signed({1'b0, ACCUM_MAX})) begin //adds 0 to MSB to make it a non-negative
+            accum_var <= ACCUM_MAX;
+            accum_prev <= $signed({1'b0, ACCUM_MAX});
+        end else begin
+            accum_var <= accum_calc[WIDTH-1:0];
+            accum_prev <= accum_calc;       
+        end
+    end
+end
+
+endmodule
+    
+module nco #(
+    parameter WIDTH = 16
+)(
+    input clk, 
+    input ext_rst,
+    input [WIDTH-1:0] accum_var,
+    output reg sig_out,
+    output reg [WIDTH-1:0] phase
+);
+    
+    wire [WIDTH-1:0] updated_phase;
+    assign updated_phase = phase + accum_var;
+    
+    always @ (posedge clk or posedge ext_rst) begin
+        if (ext_rst) begin
+            sig_out <= 1'b0;
+            phase <= 0;
+        end else begin
+            phase <= updated_phase;
+            sig_out <= updated_phase[WIDTH-1];
+        end
+    end
+endmodule
