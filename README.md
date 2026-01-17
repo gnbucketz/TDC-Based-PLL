@@ -42,3 +42,7 @@ The MSB of the phase is used as the output and a square wave whose frequency dep
 1 MSB means the phase is in the second half of the cycle.
 
 ---
+
+## Top Module
+
+We use the output of the NCO as the feedback signal to complete our closed loop.
