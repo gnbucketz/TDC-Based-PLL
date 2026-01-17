@@ -34,7 +34,7 @@ Each clock cycle, it updates an accumulator using the previous value plus the pr
 
 ## Numerically Controlled Oscillator (NCO)
 
-<img width="668" height="222" alt="image" src="https://github.com/user-attachments/assets/a724a8b8-7140-4bc7-b77b-1158b2a69bc2" />
+<img width="428" height="213" alt="image" src="https://github.com/user-attachments/assets/b9010bb5-8b67-46f9-a2de-bfaece344a8c" />
 
 The NCO adds the accumulator value to the phase every clock, so the phase keeps increasing at a rate set by the accumulator value.  
 The MSB of the phase is used as the output and a square wave whose frequency depends on how fast the phase wraps around.  
