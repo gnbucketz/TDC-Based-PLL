@@ -24,7 +24,7 @@ A negative counter value represents that the feedback or compared signal is ahea
 
 ## Proportional Integral Loop Filter
 
-<img width="706" height="110" alt="image" src="https://github.com/user-attachments/assets/074ec180-151c-4c98-888f-cae216cee7d7" />
+<img width="749" height="70" alt="image" src="https://github.com/user-attachments/assets/94b49abf-14a9-48a1-a254-1f47453a4086" />
 
 We use a proportional integral loop filter to turn the digital value into the accumulation value we need to change the speed of our signals.  
 Kp reacts immediately to the current TDC error and Ki slowly accumulates error.  
