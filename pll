@@ -159,7 +159,7 @@ assign i_term = $signed(tdc) >>> I_SHIFT;
 assign p_term = $signed(tdc) >>> P_SHIFT;
 
 assign i_calc  = i_sum + i_term;
-assign accum_calc = accum_prev + p_term + i_calc;
+assign accum_calc = accum_prev + p_term + i_term;
 
 always @ (posedge clk or posedge ext_rst) begin
     if (ext_rst) begin
