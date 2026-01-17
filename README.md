@@ -1,8 +1,4 @@
-# Building Blocks Overview
 
-This section describes the major functional blocks used in the design and explains how each block contributes to the operation of the system.
-
----
 
 ## Asynchronous Signal Synchronization
 
