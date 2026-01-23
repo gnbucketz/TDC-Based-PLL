@@ -1,7 +1,0 @@
-No hardware device connected or found
-Board: arty-z7-10
-Part: xc7z010clg400-1
-Dict: SLR0 {{X0Y0 X1Y0 X0Y1 X1Y1} {}}
-Total SLRs: 1
-Total Clock Regions: 4
-Total Tiles: 34872
