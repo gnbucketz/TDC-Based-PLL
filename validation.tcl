@@ -24,17 +24,14 @@ proc deviceInfo {fh} {
     }
 }
 
-proc slr {} {
+proc hierarchy {fh} {
     set child {}
-    set fh [open "debug.txt" "w"]
     set slrList [get_slrs]
     set crList [get_clock_regions -of_objects $slrList]
     set tileList [get_tiles -of_objects $crList]
     set slr_counter 0
     set cr_counter 0
     set tile_counter 0
-
-    deviceInfo $fh
 
     foreach slr $slrList {
         dict set child $slrList {}
@@ -60,7 +57,15 @@ proc slr {} {
     puts $fh "Total SLRs: $slr_counter"
     puts $fh "Total Clock Regions: $cr_counter"
     puts $fh "Total Tiles: $tile_counter"
-    close $fh
     return $child
 }
 
+proc main {} {
+
+set fh [open "debug.txt" "w"]
+
+deviceInfo $fh
+hierarchy $fh
+
+close $fh
+}
