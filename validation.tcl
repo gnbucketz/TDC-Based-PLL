@@ -1,3 +1,17 @@
+proc run_imp {} {
+    launch_runs impl_1
+    wait_on_run impl_1
+    open_run impl_1
+}
+
+proc clock_report {} {
+    #clock regions used and BUFG/BUFH usage
+    report_clock_utilization -file clock_util.rpt
+    #module usage
+    report_utilization       -hierarchical -file util_hier.rpt
+    
+    report_timing_summary    -file timing.rpt
+}
 proc deviceInfo {fh} {
     set boardName [get_property BOARD_PART [current_project]]
     set partName [get_property PART [current_project]]
@@ -61,11 +75,17 @@ proc hierarchy {fh} {
 }
 
 proc main {} {
+    set fh [open "debug.txt" "w"]
+    #use 10ns as top level clk
+    create_clock -name clk_in -period 10.000 [get_ports clk] 
+    #we need delay for signals coming/goes from outside the FPGA
+    set_input_delay -clock clk_in 2.0 [get_ports ref_sig]
+    set_output_delay -clock clk_in 2.0 [get_ports pll_out]
+    #ignoring false error from ext_rst
+    set_false_path -from [get_ports ext_rst]
 
-set fh [open "debug.txt" "w"]
+    deviceInfo $fh
+    hierarchy $fh
 
-deviceInfo $fh
-hierarchy $fh
-
-close $fh
+    close $fh
 }

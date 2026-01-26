@@ -1,0 +1,7 @@
+No hardware device connected or found
+Board: k24i
+Part: xck24-ubva530-2LVI-i
+Dict: SLR0 {{X0Y0 X1Y0 X0Y1 X1Y1 X0Y2 X1Y2} {}}
+Total SLRs: 1
+Total Clock Regions: 6
+Total Tiles: 112848
