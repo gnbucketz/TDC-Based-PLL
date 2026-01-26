@@ -8,9 +8,8 @@ proc clock_report {} {
     #clock regions used and BUFG/BUFH usage
     report_clock_utilization -file clock_util.rpt
     #module usage
-    report_utilization       -hierarchical -file util_hier.rpt
-    
-    report_timing_summary    -file timing.rpt
+    report_utilization -hierarchical -file util_hier.rpt
+    report_timing_summary -file timing.rpt
 }
 proc deviceInfo {fh} {
     set boardName [get_property BOARD_PART [current_project]]
