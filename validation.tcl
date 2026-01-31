@@ -11,6 +11,7 @@ proc clock_report {} {
     report_utilization -hierarchical -file util_hier.rpt
     report_timing_summary -file timing.rpt
 }
+
 proc deviceInfo {fh} {
     set boardName [get_property BOARD_PART [current_project]]
     set partName [get_property PART [current_project]]
@@ -39,40 +40,67 @@ proc deviceInfo {fh} {
 
 proc hierarchy {fh} {
     set child {}
-    set slrList [get_slrs]
-    set crList [get_clock_regions -of_objects $slrList]
-    set tileList [get_tiles -of_objects $crList]
+    set cellDict {}
     set slr_counter 0
     set cr_counter 0
     set tile_counter 0
+    set allTiles [get_tiles]
+    set allTileCount [llength $allTiles]
+
+    set slrList [get_slrs]
+    if {[llength $slrList] == 0} {
+        puts $fh "No SLRs found"
+    }
 
     foreach slr $slrList {
-        dict set child $slrList {}
+        dict set child $slr {}
         incr slr_counter
-        if {[llength $slrList] == 0} {
-            puts $fh "No SLRs found"
-            }
+        
+        set crList [get_clock_regions -of_objects $slr]
+        if {[llength $crList] == 0} {
+            puts $fh "No CRs found" 
+        }
+
         foreach cr $crList {
-            dict set child $slrList $crList {}
+            dict set child $slr $cr {}
             incr cr_counter
-                if {[llength $crList] == 0} {
-                    puts $fh "No CRs found" 
+            
+            set tileList [get_tiles -of_objects $cr]
+            if {[llength $tileList] == 0} {
+                puts $fh "No tiles found"
             }
+
             foreach tile $tileList {
                 incr tile_counter 
-                if {[llength $tileList] == 0} {
-
-                }
                 }
             }
         } 
+
+    set cellList [get_cells -hier]
+    set cellCount [llength $cellList]
+    set type [lsort -unique $typeList]
+
+    set typeList {}
+    foreach cell $cellList {
+        lappend typeList [get_property REF_NAME $cell]
+    }
+    
+    set typeCount {}
+    foreach uniqueType $typeList {
+        dict incr typeCount $uniqueType
+    }
+    dict for {cellName count} $typeCount {
+        puts $fh "Unique Cell: ${cellName}: $count"
+    }
+    
     puts $fh "Dict: $child"
     puts $fh "Total SLRs: $slr_counter"
     puts $fh "Total Clock Regions: $cr_counter"
     puts $fh "Total Tiles: $tile_counter"
+    puts $fh "Cell Count: $cellCount"
+    puts $fh "Cell Types: $type"
     return $child
 }
-
 proc main {} {
     set fh [open "debug.txt" "w"]
     #use 10ns as top level clk
